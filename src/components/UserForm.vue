@@ -137,6 +137,10 @@ export default {
       }
     },
     
+    simulateUserCreate() {
+      return new Promise(resolve => setTimeout(resolve, 1000))
+    },
+
     async handleSubmit() {
       if (!this.isFormValid) return
       
@@ -144,8 +148,7 @@ export default {
       this.submitError = null
       
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await this.simulateUserCreate()
         
         this.$emit('user-created', { ...this.formData })
         

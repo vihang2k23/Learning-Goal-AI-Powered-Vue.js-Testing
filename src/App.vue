@@ -7,7 +7,7 @@
         data-testid="nav-home"
         @click="view = 'home'"
       >
-        Home
+        HelloWorld
       </button>
       <button
         type="button"
@@ -17,6 +17,30 @@
       >
         Planner Pal
       </button>
+      <button
+        type="button"
+        :class="['app-nav__btn', { 'app-nav__btn--active': view === 'userForm' }]"
+        data-testid="nav-user-form"
+        @click="view = 'userForm'"
+      >
+        User form
+      </button>
+      <button
+        type="button"
+        :class="['app-nav__btn', { 'app-nav__btn--active': view === 'userProfile' }]"
+        data-testid="nav-user-profile"
+        @click="view = 'userProfile'"
+      >
+        User profile
+      </button>
+      <button
+        type="button"
+        :class="['app-nav__btn', { 'app-nav__btn--active': view === 'dataFetcher' }]"
+        data-testid="nav-data-fetcher"
+        @click="view = 'dataFetcher'"
+      >
+        Data fetcher
+      </button>
     </nav>
 
     <main class="app-main">
@@ -24,7 +48,10 @@
         v-if="view === 'home'"
         msg="Welcome to Vue.js Testing Fundamentals"
       />
-      <PlannerPal v-else />
+      <PlannerPal v-else-if="view === 'planner'" />
+      <UserForm v-else-if="view === 'userForm'" />
+      <UserProfile v-else-if="view === 'userProfile'" :user="demoUser" />
+      <DataFetcher v-else-if="view === 'dataFetcher'" />
     </main>
   </div>
 </template>
@@ -32,16 +59,32 @@
 <script>
 import HelloWorld from './components/HelloWorld.vue'
 import PlannerPal from './components/PlannerPal.vue'
+import UserForm from './components/UserForm.vue'
+import UserProfile from './components/UserProfile.vue'
+import DataFetcher from './components/DataFetcher.vue'
 
 export default {
   name: 'App',
   components: {
     HelloWorld,
     PlannerPal,
+    UserForm,
+    UserProfile,
+    DataFetcher,
   },
   data() {
     return {
       view: 'home',
+      demoUser: {
+        id: 1,
+        email: 'demo@example.com',
+        firstName: 'Demo',
+        lastName: 'User',
+        username: 'demouser',
+        status: 'active',
+        postsCount: 12,
+        followers: 3400,
+      },
     }
   },
 }
@@ -58,9 +101,11 @@ export default {
 
 .app-nav {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
+  padding: 0 0.75rem;
 }
 
 .app-nav__btn {

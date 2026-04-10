@@ -3,9 +3,9 @@ import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
 /**
- * Dev-only mock for Planner Pal E2E and local manual testing.
+ * Dev-only API mocks for local manual testing and E2E.
  */
-function plannerProfileMockPlugin() {
+function devApiMocksPlugin() {
   const defaultProfile = () => ({
     id: 1,
     name: 'Alex Planner',
@@ -17,11 +17,49 @@ function plannerProfileMockPlugin() {
 
   let profile = defaultProfile()
 
+  const sampleUsers = [
+    { id: 1, name: 'Alice Johnson', email: 'alice@example.com', status: 'active' },
+    { id: 2, name: 'Bob Smith', email: 'bob@example.com', status: 'inactive' },
+    { id: 3, name: 'Carol Davis', email: 'carol@example.com', status: 'active' },
+  ]
+
   return {
-    name: 'planner-profile-api-mock',
+    name: 'dev-api-mocks',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const pathname = (req.url || '').split('?')[0]
+
+        if (pathname === '/api/users' && req.method === 'GET') {
+          res.setHeader('Content-Type', 'application/json')
+          res.end(
+            JSON.stringify({
+              users: sampleUsers,
+              totalPages: 1,
+            }),
+          )
+          return
+        }
+
+        // UserProfile "Refresh" → fetch(`/api/users/${id}`) expects JSON, not index.html
+        const userById = pathname.match(/^\/api\/users\/(\d+)$/)
+        if (userById && req.method === 'GET') {
+          const id = Number(userById[1])
+          res.setHeader('Content-Type', 'application/json')
+          res.end(
+            JSON.stringify({
+              id,
+              email: 'demo@example.com',
+              firstName: 'Demo',
+              lastName: 'User',
+              username: 'demouser',
+              status: 'active',
+              postsCount: 12,
+              followers: 3400,
+            }),
+          )
+          return
+        }
+
         const match = pathname.match(/^\/api\/planner-profile\/(\d+)$/)
         if (!match) return next()
 
@@ -60,7 +98,7 @@ function plannerProfileMockPlugin() {
 }
 
 export default defineConfig({
-  plugins: [vue(), plannerProfileMockPlugin()],
+  plugins: [vue(), devApiMocksPlugin()],
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),

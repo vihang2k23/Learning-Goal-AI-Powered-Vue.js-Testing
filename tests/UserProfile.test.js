@@ -1,3 +1,5 @@
+
+
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import UserProfile from '../src/components/UserProfile.vue'
@@ -25,16 +27,16 @@ describe('UserProfile - Component Props and Validation', () => {
   })
 
   it('validates user prop structure', () => {
-    // Test with invalid user object - Vue should handle this gracefully
     const wrapper1 = mount(UserProfile, {
-      props: { user: { id: 'invalid' } }
+      props: { user: { id: 'invalid' } },
     })
-    expect(wrapper1.exists()).toBe(true)
-    
+    expect(wrapper1.find('.user-profile').exists()).toBe(true)
+
     const wrapper2 = mount(UserProfile, {
-      props: { user: null }
+      props: { user: null },
     })
-    expect(wrapper2.exists()).toBe(true)
+    expect(wrapper2.find('[data-testid="missing-user"]').exists()).toBe(true)
+    expect(wrapper2.text()).toContain('No user data')
   })
 
   it('handles missing user gracefully', () => {

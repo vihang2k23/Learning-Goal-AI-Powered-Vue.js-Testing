@@ -205,11 +205,15 @@ export function testPropValidation(component, propName, validValues, invalidValu
 /**
  * Test computed property
  */
-export function testComputedProperty(wrapper, propertyName, testCases) {
+/** @param {() => import('@vue/test-utils').VueWrapper} getWrapper - called inside each test (after beforeEach mounts). */
+export function testComputedProperty(getWrapper, propertyName, testCases) {
   describe(`computed property: ${propertyName}`, () => {
     testCases.forEach(({ input, expected, description }) => {
       it(`${description || `returns ${expected} for ${JSON.stringify(input)}`}`, async () => {
-        if (input) {
+        const wrapper = getWrapper()
+        if (input?.user !== undefined) {
+          await wrapper.setProps({ user: input.user })
+        } else if (input && Object.keys(input).length > 0) {
           await wrapper.setData(input)
         }
         expect(wrapper.vm[propertyName]).toBe(expected)
@@ -221,15 +225,20 @@ export function testComputedProperty(wrapper, propertyName, testCases) {
 /**
  * Test method with different inputs
  */
-export function testMethod(wrapper, methodName, testCases) {
+/** @param {() => import('@vue/test-utils').VueWrapper} getWrapper */
+export function testMethod(getWrapper, methodName, testCases) {
   describe(`method: ${methodName}`, () => {
     testCases.forEach(({ input, expected, description, shouldThrow }) => {
       it(`${description || `returns ${expected} for ${JSON.stringify(input)}`}`, async () => {
+        const wrapper = getWrapper()
+        const method = wrapper.vm[methodName]
+        const args = Array.isArray(input) ? input : input !== undefined ? [input] : []
         if (shouldThrow) {
-          await expect(wrapper.vm[methodName](input)).rejects.toThrow()
+          await expect(method.apply(wrapper.vm, args)).rejects.toThrow()
         } else {
-          const result = await wrapper.vm[methodName](input)
-          expect(result).toEqual(expected)
+          const result = method.apply(wrapper.vm, args)
+          const resolved = result && typeof result.then === 'function' ? await result : result
+          expect(resolved).toEqual(expected)
         }
       })
     })

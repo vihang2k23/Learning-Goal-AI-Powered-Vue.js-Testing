@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import UserForm from '../src/components/UserForm.vue'
 
@@ -20,7 +20,14 @@ describe('UserForm - External Dependencies and Modules', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    UserValidator.validateUser.mockReturnValue({ isValid: true, errors: [] })
+    DateHelper.formatDate.mockReturnValue('')
+    DateHelper.getDaysUntil.mockReturnValue(0)
     wrapper = mount(UserForm)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   describe('External Module Mocking', () => {
@@ -36,26 +43,32 @@ describe('UserForm - External Dependencies and Modules', () => {
       expect(wrapper.vm.errors.name).toBe('Name must be at least 2 characters long')
     })
 
-    it('mocks DateHelper.formatDate', () => {
+    it('mocks DateHelper.formatDate', async () => {
       const mockDate = '2023-12-25'
       const formattedDate = 'December 25, 2023'
-      
+
       DateHelper.formatDate.mockReturnValue(formattedDate)
-      
-      wrapper.setData({ birthdate: mockDate })
-      
+
+      await wrapper.setData({
+        formData: { ...wrapper.vm.formData, birthdate: mockDate },
+      })
+      await wrapper.vm.$nextTick()
+
       expect(DateHelper.formatDate).toHaveBeenCalledWith(mockDate)
       expect(wrapper.vm.formattedBirthdate).toBe(formattedDate)
     })
 
-    it('mocks DateHelper.getDaysUntil', () => {
+    it('mocks DateHelper.getDaysUntil', async () => {
       const mockDate = '2023-12-25'
       const daysUntil = 30
-      
+
       DateHelper.getDaysUntil.mockReturnValue(daysUntil)
-      
-      wrapper.setData({ birthdate: mockDate })
-      
+
+      await wrapper.setData({
+        formData: { ...wrapper.vm.formData, birthdate: mockDate },
+      })
+      await wrapper.vm.$nextTick()
+
       expect(DateHelper.getDaysUntil).toHaveBeenCalledWith(mockDate)
       expect(wrapper.vm.daysUntilBirthday).toBe(daysUntil)
     })
@@ -179,16 +192,9 @@ describe('UserForm - External Dependencies and Modules', () => {
         errors: []
       })
 
-      // Mock the setTimeout to reject
-      const originalSetTimeout = global.setTimeout
-      global.setTimeout = vi.fn((callback, delay) => {
-        if (delay === 1000) {
-          return originalSetTimeout(() => {
-            throw new Error('Network error')
-          }, 10)
-        }
-        return originalSetTimeout(callback, delay)
-      })
+      vi.spyOn(wrapper.vm, 'simulateUserCreate').mockRejectedValueOnce(
+        new Error('Network error')
+      )
 
       const userData = {
         name: 'John Doe',
@@ -197,17 +203,15 @@ describe('UserForm - External Dependencies and Modules', () => {
         birthdate: '1998-01-01'
       }
 
-      wrapper.setData({ formData: userData })
+      await wrapper.setData({ formData: userData })
 
       const form = wrapper.find('form')
       await form.trigger('submit')
-
-      await new Promise(resolve => setTimeout(resolve, 50))
-
-      expect(wrapper.vm.submitError).toBe('Failed to create user. Please try again.')
-
-      // Restore original setTimeout
-      global.setTimeout = originalSetTimeout
+      await vi.waitFor(() => {
+        expect(wrapper.vm.submitError).toBe(
+          'Failed to create user. Please try again.'
+        )
+      })
     })
 
     it('resets form after successful submission', async () => {
@@ -242,11 +246,14 @@ describe('UserForm - External Dependencies and Modules', () => {
   })
 
   describe('UI State Management', () => {
-    it('disables submit button when form is invalid', () => {
+    it('disables submit button when form is invalid', async () => {
       UserValidator.validateUser.mockReturnValue({
         isValid: false,
         errors: ['Invalid email']
       })
+
+      await wrapper.setData({ errors: { email: 'Invalid email' } })
+      await wrapper.vm.$nextTick()
 
       const submitBtn = wrapper.find('.submit-btn')
       expect(submitBtn.attributes('disabled')).toBeDefined()
@@ -277,7 +284,15 @@ describe('UserForm - External Dependencies and Modules', () => {
         errors: []
       })
 
-      wrapper.setData({
+      let resolveCreate
+      vi.spyOn(wrapper.vm, 'simulateUserCreate').mockImplementation(
+        () =>
+          new Promise(resolve => {
+            resolveCreate = resolve
+          })
+      )
+
+      await wrapper.setData({
         formData: {
           name: 'John Doe',
           email: 'john@example.com',
@@ -287,45 +302,56 @@ describe('UserForm - External Dependencies and Modules', () => {
       })
 
       const form = wrapper.find('form')
-      form.trigger('submit')
+      const submitPromise = form.trigger('submit')
+      await wrapper.vm.$nextTick()
 
       expect(wrapper.vm.isSubmitting).toBe(true)
       expect(wrapper.find('.submit-btn').text()).toBe('Creating...')
 
-      // Wait for completion
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      resolveCreate()
+      await submitPromise
+      await wrapper.vm.$nextTick()
       expect(wrapper.vm.isSubmitting).toBe(false)
     })
 
-    it('displays formatted birthdate', () => {
+    it('displays formatted birthdate', async () => {
       const mockDate = '2023-12-25'
       const formattedDate = 'December 25, 2023'
-      
+
       DateHelper.formatDate.mockReturnValue(formattedDate)
-      
-      wrapper.setData({ birthdate: mockDate })
-      
+
+      await wrapper.setData({
+        formData: { ...wrapper.vm.formData, birthdate: mockDate },
+      })
+      await wrapper.vm.$nextTick()
+
       expect(wrapper.find('.date-info').text()).toContain(formattedDate)
     })
 
-    it('displays days until birthday', () => {
+    it('displays days until birthday', async () => {
       const mockDate = '2023-12-25'
       const daysUntil = 30
-      
+
       DateHelper.getDaysUntil.mockReturnValue(daysUntil)
-      
-      wrapper.setData({ birthdate: mockDate })
-      
+
+      await wrapper.setData({
+        formData: { ...wrapper.vm.formData, birthdate: mockDate },
+      })
+      await wrapper.vm.$nextTick()
+
       expect(wrapper.find('.date-info').text()).toContain('30 days until birthday')
     })
 
-    it('shows birthday passed message', () => {
+    it('shows birthday passed message', async () => {
       const mockDate = '2023-01-01'
-      
+
       DateHelper.getDaysUntil.mockReturnValue(-10)
-      
-      wrapper.setData({ birthdate: mockDate })
-      
+
+      await wrapper.setData({
+        formData: { ...wrapper.vm.formData, birthdate: mockDate },
+      })
+      await wrapper.vm.$nextTick()
+
       expect(wrapper.find('.date-info').text()).toContain('Birthday passed this year')
     })
   })

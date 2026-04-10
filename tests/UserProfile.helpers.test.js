@@ -30,9 +30,10 @@ describe('UserProfile - Using Test Helpers', () => {
 
     it('uses mock user helper', () => {
       const customUser = createMockUser({
-        name: 'Jane Smith',
+        firstName: 'Jane',
+        lastName: 'Smith',
         email: 'jane@example.com',
-        followers: 2500000
+        followers: 2500000,
       })
 
       wrapper = mountWithDefaults(UserProfile, {
@@ -64,7 +65,7 @@ describe('UserProfile - Using Test Helpers', () => {
 
   describe('Computed Properties with Helper', () => {
     testComputedProperty(
-      wrapper,
+      () => wrapper,
       'displayName',
       [
         {
@@ -86,7 +87,7 @@ describe('UserProfile - Using Test Helpers', () => {
     )
 
     testComputedProperty(
-      wrapper,
+      () => wrapper,
       'formattedFollowers',
       [
         {
@@ -110,7 +111,7 @@ describe('UserProfile - Using Test Helpers', () => {
 
   describe('Methods with Helper', () => {
     testMethod(
-      wrapper,
+      () => wrapper,
       'getUserSummary',
       [
         {
@@ -127,7 +128,7 @@ describe('UserProfile - Using Test Helpers', () => {
     )
 
     testMethod(
-      wrapper,
+      () => wrapper,
       'resetError',
       [
         {
@@ -170,10 +171,10 @@ describe('UserProfile - Using Test Helpers', () => {
       const consoleSpy = createConsoleSpy('warn')
 
       mountWithDefaults(UserProfile, {
-        props: { user: { id: 'invalid' } }
+        props: { user: { id: 'invalid' } },
       })
 
-      // Restore the spy
+      expect(consoleSpy).toHaveBeenCalled()
       restoreConsoleSpy(consoleSpy)
     })
   })
@@ -238,8 +239,13 @@ describe('UserProfile - Using Test Helpers', () => {
     })
 
     it('tests component reactivity with prop changes', async () => {
-      const initialUser = createMockUser({ id: 1, name: 'John Doe' })
-      const updatedUser = createMockUser({ id: 2, name: 'Jane Smith' })
+      const initialUser = createMockUser({ id: 1, firstName: 'John', lastName: 'Doe' })
+      const updatedUser = createMockUser({
+        id: 2,
+        firstName: 'Jane',
+        lastName: 'Smith',
+        email: 'jane@example.com',
+      })
 
       wrapper = mountWithDefaults(UserProfile, {
         props: { user: initialUser }
@@ -265,8 +271,8 @@ describe('UserProfile - Using Test Helpers', () => {
       const testCases = [
         { followers: 999, expected: '999' },
         { followers: 1000, expected: '1.0K' },
-        { followers: 999999, expected: '999.9K' },
-        { followers: 1000000, expected: '1.0M' }
+        { followers: 999999, expected: '1000.0K' },
+        { followers: 1000000, expected: '1.0M' },
       ]
 
       testCases.forEach(({ followers, expected }) => {

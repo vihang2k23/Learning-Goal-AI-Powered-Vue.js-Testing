@@ -128,8 +128,8 @@ export default {
         }
         
         const data = await response.json()
-        this.users = data.users
-        this.totalPages = data.totalPages
+        this.users = Array.isArray(data?.users) ? data.users : []
+        this.totalPages = data?.totalPages ?? 1
         
         this.$emit('users-loaded', data.users)
       } catch (error) {

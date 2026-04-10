@@ -1,15 +1,19 @@
 <template>
   <div class="user-profile">
+    <div v-if="!user" class="user-profile__missing" data-testid="missing-user">
+      No user data
+    </div>
+    <template v-else>
     <div class="user-info">
       <h2>{{ displayName }}</h2>
-      <p class="email">{{ user.email }}</p>
+      <p class="email">{{ user.email || '—' }}</p>
       <p class="status" :class="statusClass">{{ statusText }}</p>
     </div>
     
     <div class="user-stats">
       <div class="stat">
         <span class="label">Posts:</span>
-        <span class="value">{{ user.postsCount }}</span>
+        <span class="value">{{ user.postsCount ?? 0 }}</span>
       </div>
       <div class="stat">
         <span class="label">Followers:</span>
@@ -38,6 +42,7 @@
     <div v-if="error" class="error">
       {{ error }}
     </div>
+    </template>
   </div>
 </template>
 
@@ -69,6 +74,7 @@ export default {
   
   computed: {
     displayName() {
+      if (!this.user) return 'Unknown User'
       if (this.user.firstName && this.user.lastName) {
         return `${this.user.firstName} ${this.user.lastName}`
       }
@@ -89,25 +95,30 @@ export default {
     },
     
     formattedFollowers() {
-      if (this.user.followers >= 1000000) {
-        return `${(this.user.followers / 1000000).toFixed(1)}M`
-      } else if (this.user.followers >= 1000) {
-        return `${(this.user.followers / 1000).toFixed(1)}K`
+      if (!this.user || this.user.followers == null) return '0'
+      const f = Number(this.user.followers)
+      if (Number.isNaN(f)) return '0'
+      if (f >= 1000000) {
+        return `${(f / 1000000).toFixed(1)}M`
       }
-      return this.user.followers.toString()
+      if (f >= 1000) {
+        return `${(f / 1000).toFixed(1)}K`
+      }
+      return String(f)
     },
     
     userLevel() {
-      if (this.user.postsCount >= 100) return 'Expert'
-      if (this.user.postsCount >= 50) return 'Advanced'
-      if (this.user.postsCount >= 10) return 'Intermediate'
+      const n = Number(this.user?.postsCount) || 0
+      if (n >= 100) return 'Expert'
+      if (n >= 50) return 'Advanced'
+      if (n >= 10) return 'Intermediate'
       return 'Beginner'
     }
   },
   
   methods: {
     async followUser() {
-      if (this.isFollowing) return
+      if (this.isFollowing || !this.user) return
       
       try {
         this.isFollowing = true
@@ -125,7 +136,7 @@ export default {
     },
     
     async loadUserData() {
-      if (this.loading) return
+      if (this.loading || !this.user) return
       
       this.loading = true
       this.error = null
@@ -150,10 +161,13 @@ export default {
     },
     
     getUserSummary() {
+      if (!this.user) {
+        return { name: 'Unknown User', level: 'Beginner', posts: 0, followers: '0' }
+      }
       return {
         name: this.displayName,
         level: this.userLevel,
-        posts: this.user.postsCount,
+        posts: this.user.postsCount ?? 0,
         followers: this.formattedFollowers
       }
     }
